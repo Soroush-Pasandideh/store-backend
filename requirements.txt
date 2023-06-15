@@ -8,3 +8,4 @@ tzdata==2023.2
 djangorestframework~=3.14.0
 django-debug-toolbar~=4.0.0
 drf-nested-routers
+django-filter~=23.2

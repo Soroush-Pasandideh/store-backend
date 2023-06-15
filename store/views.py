@@ -11,6 +11,7 @@ from rest_framework import status
 from rest_framework.status import HTTP_201_CREATED, HTTP_204_NO_CONTENT
 
 from .models import Product, Collection, OrderItem, Review
+from .filters import ProductFilter
 from .serializers import ProductSerializer, CollectionSerializer, ReviewSerializer
 
 
@@ -18,7 +19,7 @@ class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['collection_id']
+    filterset_class = ProductFilter
 
     def get_serializer_context(self):
         return {'request': self.request}
