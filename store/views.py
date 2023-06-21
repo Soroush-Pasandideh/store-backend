@@ -24,7 +24,6 @@ class ProductViewSet(ModelViewSet):
     filterset_class = ProductFilter
     search_fields = ['title', 'description']
     ordering_fields = ['unit_price', 'last_update']
-    pagination_class = PageNumberPagination
 
     def get_serializer_context(self):
         return {'request': self.request}
