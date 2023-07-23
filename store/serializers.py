@@ -167,3 +167,4 @@ class CreateOrderSerializer(serializers.Serializer):
             # here we use bulk to avoid too much queries
             OrderItem.objects.bulk_create(order_items)
             Cart.objects.filter(pk=cart_id).delete()
+            return order
