@@ -1,9 +1,8 @@
-from enum import unique
-from uuid import uuid4
 from django.contrib import admin
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from uuid import uuid4
 
 
 class Promotion(models.Model):
@@ -33,7 +32,8 @@ class Product(models.Model):
         validators=[MinValueValidator(1)])
     inventory = models.IntegerField(validators=[MinValueValidator(0)])
     last_update = models.DateTimeField(auto_now=True)
-    collection = models.ForeignKey(Collection, on_delete=models.PROTECT, related_name='products')
+    collection = models.ForeignKey(
+        Collection, on_delete=models.PROTECT, related_name='products')
     promotions = models.ManyToManyField(Promotion, blank=True)
 
     def __str__(self) -> str:
@@ -57,7 +57,8 @@ class Customer(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     membership = models.CharField(
         max_length=1, choices=MEMBERSHIP_CHOICES, default=MEMBERSHIP_BRONZE)
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'{self.user.first_name} {self.user.last_name}'
@@ -73,7 +74,7 @@ class Customer(models.Model):
     class Meta:
         ordering = ['user__first_name', 'user__last_name']
         permissions = [
-            ('view_history', 'can view history')
+            ('view_history', 'Can view history')
         ]
 
 
@@ -94,13 +95,14 @@ class Order(models.Model):
 
     class Meta:
         permissions = [
-            ('cancel_order', 'can cancel order')
+            ('cancel_order', 'Can cancel order')
         ]
 
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='items')
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='orderitems')
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name='orderitems')
     quantity = models.PositiveSmallIntegerField()
     unit_price = models.DecimalField(max_digits=6, decimal_places=2)
 
@@ -118,17 +120,20 @@ class Cart(models.Model):
 
 
 class CartItem(models.Model):
-    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    cart = models.ForeignKey(
+        Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    quantity = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1)]
+    )
 
     class Meta:
         unique_together = [['cart', 'product']]
-        # it's for when we add a product to a cart, the quantity increases and another record don't create.
 
 
 class Review(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name='reviews')
     name = models.CharField(max_length=255)
     description = models.TextField()
     date = models.DateField(auto_now_add=True)

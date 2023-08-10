@@ -1,8 +1,9 @@
 from decimal import Decimal
 from django.db import transaction
 from rest_framework import serializers
-from .models import Product, Collection, Review, Cart, CartItem, Customer, Order, OrderItem
 from .signals import order_created
+from .models import Cart, CartItem, Customer, Order, OrderItem, Product, Collection, Review
+
 
 class CollectionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -11,38 +12,18 @@ class CollectionSerializer(serializers.ModelSerializer):
 
     products_count = serializers.IntegerField(read_only=True)
 
-    # id = serializers.IntegerField()
-    # title = serializers.CharField(max_length=255)
-
 
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'title', 'description', 'slug', 'inventory', 'unit_price', 'price_with_tax', 'collection']
+        fields = ['id', 'title', 'description', 'slug', 'inventory',
+                  'unit_price', 'price_with_tax', 'collection']
 
-    # id = serializers.IntegerField()
-    # title = serializers.CharField(max_length=255)
-    # price = serializers.DecimalField(max_digits=6, decimal_places=2, source='unit_price')
-    price_with_tax = serializers.SerializerMethodField(method_name='calculate_tax')
-
-    # collection = serializers.HyperlinkedRelatedField(
-    #     queryset=Collection.objects.all(),
-    #     view_name='collection-detail'
-    # )
+    price_with_tax = serializers.SerializerMethodField(
+        method_name='calculate_tax')
 
     def calculate_tax(self, product: Product):
         return product.unit_price * Decimal(1.1)
-
-    # def create(self, validated_data):
-    #     product = Product(**validated_data)
-    #     product.other = 1
-    #     product.save()
-    #     return product
-    #
-    # def update(self, instance, validated_data):
-    #     instance.unit_price = validated_data.get('unit_price')
-    #     instance.save()
-    #     return instance
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -78,7 +59,7 @@ class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     total_price = serializers.SerializerMethodField()
 
-    def get_total_price(self, cart: Cart):
+    def get_total_price(self, cart):
         return sum([item.quantity * item.product.unit_price for item in cart.items.all()])
 
     class Meta:
@@ -91,7 +72,8 @@ class AddCartItemSerializer(serializers.ModelSerializer):
 
     def validate_product_id(self, value):
         if not Product.objects.filter(pk=value).exists():
-            raise serializers.ValidationError('no product with the given ID was found.')
+            raise serializers.ValidationError(
+                'No product with the given ID was found.')
         return value
 
     def save(self, **kwargs):
@@ -100,14 +82,14 @@ class AddCartItemSerializer(serializers.ModelSerializer):
         quantity = self.validated_data['quantity']
 
         try:
-            # if we're here it means this product exists and we should just update it.
-            cart_item = CartItem.objects.get(cart_id=cart_id, product_id=product_id)
+            cart_item = CartItem.objects.get(
+                cart_id=cart_id, product_id=product_id)
             cart_item.quantity += quantity
             cart_item.save()
             self.instance = cart_item
         except CartItem.DoesNotExist:
-            self.instance = CartItem.objects.create(cart_id=cart_id, **self.validated_data)
-            # this <**self.validated_data> means <product_id=product_id, quantity=quantity>
+            self.instance = CartItem.objects.create(
+                cart_id=cart_id, **self.validated_data)
 
         return self.instance
 
@@ -143,7 +125,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['id', 'customer_id', 'placed_at', 'payment_status', 'items']
+        fields = ['id', 'customer', 'placed_at', 'payment_status', 'items']
 
 
 class UpdateOrderSerializer(serializers.ModelSerializer):
@@ -157,7 +139,8 @@ class CreateOrderSerializer(serializers.Serializer):
 
     def validate_cart_id(self, cart_id):
         if not Cart.objects.filter(pk=cart_id).exists():
-            raise serializers.ValidationError('No cart with the given id was found.')
+            raise serializers.ValidationError(
+                'No cart with the given ID was found.')
         if CartItem.objects.filter(cart_id=cart_id).count() == 0:
             raise serializers.ValidationError('The cart is empty.')
         return cart_id
@@ -165,20 +148,26 @@ class CreateOrderSerializer(serializers.Serializer):
     def save(self, **kwargs):
         with transaction.atomic():
             cart_id = self.validated_data['cart_id']
-            customer = Customer.objects.get(user_id=self.context['user_id'])
+
+            customer = Customer.objects.get(
+                user_id=self.context['user_id'])
             order = Order.objects.create(customer=customer)
-            # to create cart items
-            cart_items = CartItem.objects.select_related('product').filter(cart_id=cart_id)
-            # convert cart items to order items
+
+            cart_items = CartItem.objects \
+                .select_related('product') \
+                .filter(cart_id=cart_id)
             order_items = [
-                OrderItem(order=order,
-                          product=item.product,
-                          unit_price=item.product.unit_price,
-                          quantity=item.quantity,
-                          ) for item in cart_items
+                OrderItem(
+                    order=order,
+                    product=item.product,
+                    unit_price=item.product.unit_price,
+                    quantity=item.quantity
+                ) for item in cart_items
             ]
-            # here we use bulk to avoid too much queries
             OrderItem.objects.bulk_create(order_items)
+
             Cart.objects.filter(pk=cart_id).delete()
+
             order_created.send_robust(self.__class__, order=order)
+
             return order
