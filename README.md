@@ -1,6 +1,8 @@
 # store-backend-Django
 This is an implementation of the back-end of an online store using Django and Django REST Framework.
+
 It connects to MySQL database to store data.
+
 All store endpoints are represented in the API root (localhost:8000/store/ if you’re using 8000 port).
 In the products endpoint, all products are listed with their details. Each product can be accessed by entering its ID after the products endpoint.
 This is true for other endpoints as well.
